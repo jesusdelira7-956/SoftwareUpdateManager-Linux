@@ -227,6 +227,8 @@ SoftwareUpdateManager-Linux/
 
 ---
 
-## 📜 License
+## 📜 License & Privacy Notice
 
 Released under the [MIT License](LICENSE). Free to use, modify, and share across personal and enterprise computers.
+
+> **Privacy & Anti-Solicitation Notice:** Automated scraping of maintainer contact details, unsolicited third-party "trust index" or badge-farming outreach, and commercial email solicitations regarding this repository are unwelcome. All legitimate inquiries and bug reports belong exclusively in **GitHub Issues**. Please respect developer privacy.

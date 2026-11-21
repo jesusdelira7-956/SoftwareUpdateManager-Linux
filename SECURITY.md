@@ -8,3 +8,6 @@
 
 ## Reporting a Vulnerability
 Please open a private security advisory on the project's GitHub repository rather than posting exploit details publicly.
+
+## Privacy & Anti-Solicitation Policy
+> **Notice:** Automated repository scraping, third-party "trust index" badge-farming, contact email harvesting, and unsolicited commercial outreach regarding this repository are strictly unwelcome. All legitimate security disclosures, questions, and collaboration must be submitted exclusively through **GitHub Issues** or **GitHub Security Advisories**. Please respect developer privacy.
