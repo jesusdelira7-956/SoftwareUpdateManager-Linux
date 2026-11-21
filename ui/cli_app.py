@@ -231,6 +231,7 @@ def run_interactive_cli(launch_gui_cb=None) -> int:
         if launch_gui_cb:
             print("  [7] Switch to Desktop GUI Mode")
         print("  [8] Help & User Guide")
+        print("  [9] Support Development (☕ Buy Me A Coffee)")
         print("  [0] Exit")
 
         choice = input("\nSelect an option: ").strip()
@@ -266,6 +267,17 @@ def run_interactive_cli(launch_gui_cb=None) -> int:
             print("  Config File: ~/.config/software-update-manager/config.json")
             print("  Audit Logs:  ~/.local/state/software-update-manager/logs/")
             print("  Security:    Runs unprivileged as $USER; elevates only APT/Snap/UFW/Timeshift via sudo/pkexec.")
-            print("  Full Docs:   See README.md, AGENT_SAFETY.md, and SECURITY.md.\n")
+            print("  Full Docs:   See README.md, AGENT_SAFETY.md, and SECURITY.md.")
+            print("  Support:     https://buymeacoffee.com/JesseInTheLab\n")
+        elif choice == "9":
+            print(f"\n{BOLD}☕ Support Development — Jesse In The Lab{NC}")
+            print("  If this tool saves you time maintaining your Linux PCs, consider supporting future development:")
+            print("  👉 https://buymeacoffee.com/JesseInTheLab\n")
+            try:
+                import webbrowser
+                webbrowser.open("https://buymeacoffee.com/JesseInTheLab")
+                print("  (Opening link in your default web browser...)\n")
+            except Exception:
+                pass
         else:
             print(f"{YELLOW}Invalid option. Please choose from the menu.{NC}\n")

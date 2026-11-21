@@ -802,10 +802,10 @@ class LinuxUpdateManagerGUI(tk.Tk):
 
         tk.Button(
             brand_card,
-            text="☕ Support Project",
+            text="☕ Buy Me A Coffee",
             command=lambda: launch_web_ai("https://buymeacoffee.com/JesseInTheLab"),
             bg="#f59e0b", fg="#000000", activebackground="#d97706", activeforeground="#ffffff",
-            font=("Sans", 9, "bold"), relief=tk.FLAT, padx=12, pady=6, cursor="hand2",
+            font=("Sans", 9, "bold"), relief=tk.FLAT, padx=14, pady=7, cursor="hand2",
         ).pack(side=tk.RIGHT, padx=6)
 
         help_text = scrolledtext.ScrolledText(
