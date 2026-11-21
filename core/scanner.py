@@ -13,11 +13,12 @@ from core.config_manager import get_logger, load_config
 from core.package_engine import (
     UpdateItem,
     apply_package_update,
-    scan_apt_updates,
     scan_dev_sdks,
     scan_flatpak_updates,
     scan_snap_updates,
+    scan_system_updates,
 )
+from core.privilege_helper import detect_system_package_manager
 
 
 def scan_all_updates(
@@ -27,8 +28,9 @@ def scan_all_updates(
     """Scan all enabled package sources in parallel and return a unified list."""
     cfg = config or load_config()
     logger = get_logger()
+    pm_label = (detect_system_package_manager() or "System").upper()
     tasks = {
-        "APT": lambda: scan_apt_updates(cfg),
+        pm_label: lambda: scan_system_updates(cfg),
         "Flatpak": lambda: scan_flatpak_updates(cfg),
         "Snap": lambda: scan_snap_updates(cfg),
         "Dev SDKs": lambda: scan_dev_sdks(cfg),

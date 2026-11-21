@@ -2,6 +2,27 @@
 
 All notable changes to **Linux / Zorin Software Update Manager & Intrusion Shield** will be documented in this file.
 
+## [1.1.0] - 2026-11-21 — Universal Linux Distro Support
+
+### Added
+- **Multi-Distro Native Package Engine (`core/package_engine.py`):**
+  - **DNF / DNF5** support for **Fedora, RHEL, Nobara, Rocky, and AlmaLinux** (`dnf check-update` / `dnf upgrade -y`).
+  - **Pacman** support for **Arch Linux, Manjaro, EndeavourOS, and CachyOS** (`checkupdates` / `pacman -Qu` with Arch-safe full-sync `pacman -Syu` guard to prevent partial-upgrade library breakage).
+  - **Zypper** support for **openSUSE Tumbleweed (`zypper dup`) and Leap (`zypper up`)**.
+  - Unified `scan_system_updates()` and `refresh_system_cache()` dispatcher with dynamic GUI/CLI labels (`Refresh APT / DNF / Pacman / Zypper Cache`).
+- **Universal Firewall Backend (`core/network_auditor.py`):**
+  - Auto-detects **`ufw`** (Debian/Ubuntu/Zorin/Arch) OR **`firewalld`** (`firewall-cmd` on Fedora/RHEL/openSUSE) for 1-click LAN port blocking.
+  - Guards `systemctl` calls so non-systemd distributions (Alpine, Void, Artix, Devuan) never crash.
+- **Cross-Desktop Installer & Dialogs (`install.sh` & `core/privilege_helper.py`):**
+  - Auto-detects `apt`, `dnf`/`dnf5`, `pacman`, `zypper`, and `apk` when offering to install Tkinter for Desktop GUI mode.
+  - Added **KDE Plasma `kdialog`** fallback alongside GNOME `zenity`.
+  - Added **`doas` and `run0`** elevation fallbacks alongside `pkexec` and `sudo`.
+  - Replaced Debian-only `x-terminal-emulator` in `.desktop` actions with a portable terminal resolver (`xdg-terminal-exec`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `alacritty`, `xterm`).
+- **Universal Installed Software Inventory & Architecture Guards:**
+  - `specs_collector.py` now inventories explicitly installed **Pacman (`pacman -Qe`)** and **RPM (`rpm -qa`)** packages alongside APT, Flatpak, and Snap, and reports active `package_manager` and `firewall_backend`.
+  - `appimage_engine.py` checks `platform.machine()` (`x86_64`/`amd64`) and `dpkg` availability before scanning `.deb`-only providers so ARM64 and non-Debian hosts run cleanly.
+  - `rollback_manager.py` provides distro-specific Timeshift/Snapper install hints.
+
 ## [1.0.0] - 2026-11-21
 
 ### Added

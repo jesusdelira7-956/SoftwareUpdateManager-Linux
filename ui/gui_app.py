@@ -26,9 +26,9 @@ from core.config_manager import (
     load_config,
     save_config,
 )
-from core.network_auditor import audit_listening_ports, block_port_with_ufw, get_ufw_status
-from core.package_engine import UpdateItem, refresh_apt_index
-from core.privilege_helper import copy_to_clipboard, send_notification
+from core.network_auditor import audit_listening_ports, block_port_with_ufw, detect_firewall_tool, get_ufw_status
+from core.package_engine import UpdateItem, refresh_system_cache
+from core.privilege_helper import copy_to_clipboard, detect_system_package_manager, send_notification
 from core.rollback_manager import create_pre_update_snapshot, detect_snapshot_tool
 from core.scanner import apply_update_item, scan_all_updates
 from core.security_auditor import sanitize_for_ai
@@ -243,8 +243,9 @@ class LinuxUpdateManagerGUI(tk.Tk):
             bg=ACCENT, fg="#ffffff", relief=tk.FLAT, padx=12, pady=6, font=("Sans", 9, "bold"),
         ).pack(side=tk.LEFT, padx=(0, 8))
 
+        pm_label = (detect_system_package_manager() or "Package").upper()
         tk.Button(
-            toolbar, text="Refresh APT Cache", command=self._on_refresh_apt,
+            toolbar, text=f"Refresh {pm_label} Cache", command=self._on_refresh_apt,
             bg="#34495e", fg="#ffffff", relief=tk.FLAT, padx=12, pady=6, font=("Sans", 9),
         ).pack(side=tk.LEFT, padx=(0, 8))
 
@@ -336,7 +337,7 @@ class LinuxUpdateManagerGUI(tk.Tk):
 
         def _worker() -> None:
             try:
-                ok, out = refresh_apt_index(mode="gui", stream_cb=self._log)
+                ok, out = refresh_system_cache(mode="gui", stream_cb=self._log)
                 self._set_status("APT index refreshed" if ok else "APT refresh warning")
                 if not ok:
                     self._log(f"APT refresh issue: {out[-300:]}")
@@ -471,12 +472,13 @@ class LinuxUpdateManagerGUI(tk.Tk):
             bg=ACCENT, fg="#ffffff", relief=tk.FLAT, padx=12, pady=6, font=("Sans", 9, "bold"),
         ).pack(side=tk.LEFT, padx=(0, 8))
 
+        fw_name = (detect_firewall_tool() or "Firewall").upper()
         tk.Button(
-            bar, text="Block Selected Port via UFW", command=self._on_block_port,
+            bar, text=f"Block Selected Port ({fw_name})", command=self._on_block_port,
             bg=DANGER, fg="#ffffff", relief=tk.FLAT, padx=12, pady=6, font=("Sans", 9, "bold"),
         ).pack(side=tk.LEFT)
 
-        self.ufw_label = tk.Label(bar, text=f"UFW Status: {get_ufw_status()}", bg=CARD_BG, fg=TEXT_MUTED)
+        self.ufw_label = tk.Label(bar, text=f"Firewall: {get_ufw_status()}", bg=CARD_BG, fg=TEXT_MUTED)
         self.ufw_label.pack(side=tk.RIGHT)
 
         cols = ("port", "bind", "process", "hint", "exposure")
@@ -494,7 +496,7 @@ class LinuxUpdateManagerGUI(tk.Tk):
 
     def _on_audit_network(self) -> None:
         ports = audit_listening_ports()
-        self.ufw_label.config(text=f"UFW Status: {get_ufw_status()}")
+        self.ufw_label.config(text=f"Firewall: {get_ufw_status()}")
         for r in self.net_tree.get_children():
             self.net_tree.delete(r)
         for p in ports:
@@ -505,13 +507,14 @@ class LinuxUpdateManagerGUI(tk.Tk):
 
     def _on_block_port(self) -> None:
         sel = self.net_tree.selection()
+        fw_name = detect_firewall_tool() or "firewall"
         if not sel:
-            messagebox.showinfo("Select Port", "Select a listening port row to block external LAN access via UFW.")
+            messagebox.showinfo("Select Port", f"Select a listening port row to block external LAN access via {fw_name}.")
             return
         port = int(self.net_tree.item(sel[0])["values"][0])
-        if messagebox.askyesno("UFW Firewall Rule", f"Block external inbound TCP traffic on port {port} via UFW?"):
+        if messagebox.askyesno("Firewall Rule", f"Block external inbound TCP traffic on port {port} via {fw_name}?"):
             ok, msg = block_port_with_ufw(port, mode="gui")
-            messagebox.showinfo("UFW Result", msg) if ok else messagebox.showerror("UFW Error", msg)
+            messagebox.showinfo("Firewall Result", msg) if ok else messagebox.showerror("Firewall Error", msg)
 
     # ------------------------------------------------------------------
     # Tab 4: AI Diagnose & Zero-Port Stdio MCP Bridge

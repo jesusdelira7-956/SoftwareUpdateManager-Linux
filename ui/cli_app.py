@@ -18,9 +18,9 @@ from core.config_manager import (
     load_config,
     save_config,
 )
-from core.network_auditor import audit_listening_ports, block_port_with_ufw, get_ufw_status
-from core.package_engine import UpdateItem, refresh_apt_index
-from core.privilege_helper import send_notification
+from core.network_auditor import audit_listening_ports, block_port_with_ufw, detect_firewall_tool, get_ufw_status
+from core.package_engine import UpdateItem, refresh_system_cache
+from core.privilege_helper import detect_system_package_manager, send_notification
 from core.rollback_manager import create_pre_update_snapshot, detect_snapshot_tool
 from core.scanner import apply_update_item, scan_all_updates
 from core.specs_collector import collect_system_specs
@@ -116,7 +116,7 @@ def print_updates_table(items: list[UpdateItem]) -> None:
 def print_network_audit() -> None:
     print(f"\n{BOLD}--- Linux Network Boundary Sentinel (Listening TCP Ports) ---{NC}")
     ufw_state = get_ufw_status()
-    print(f"UFW Firewall Service Status: {CYAN}{ufw_state}{NC}\n")
+    print(f"Firewall Service Status: {CYAN}{ufw_state}{NC}\n")
     ports = audit_listening_ports()
     if not ports:
         print("No listening TCP ports detected.")
@@ -173,7 +173,7 @@ def run_headless_upgrade(auto_yes: bool = False, take_snapshot: bool = False) ->
     """Sequential unattended or prompted upgrade of all trusted updates."""
     config = load_config()
     print(f"{CYAN}Refreshing APT package index...{NC}")
-    refresh_apt_index(mode="cli", timeout_lock=int(config.get("apt_lock_timeout_seconds", 60)))
+    refresh_system_cache(mode="cli", timeout_lock=int(config.get("apt_lock_timeout_seconds", 60)))
 
     items = scan_all_updates(config, progress_cb=lambda m: print(f"  {DIM}{m}{NC}"))
     print_updates_table(items)
@@ -220,10 +220,12 @@ def run_interactive_cli(launch_gui_cb=None) -> int:
 
     cached_items: list[UpdateItem] = []
 
+    pm_label = (detect_system_package_manager() or "System").upper()
+    fw_label = (detect_firewall_tool() or "Firewall").upper()
     while True:
         print(f"{BOLD}Main Menu (Interactive CLI):{NC}")
-        print("  [1] Scan for Available Updates (APT, Flatpak, Snap, Dev SDKs, AppImages)")
-        print("  [2] Refresh APT Cache & Run Sequential Updates")
+        print(f"  [1] Scan for Available Updates ({pm_label}, Flatpak, Snap, Dev SDKs, AppImages)")
+        print(f"  [2] Refresh {pm_label} Cache & Run Sequential Updates")
         print("  [3] Network Boundary Sentinel (Audit Exposed 0.0.0.0 AI/Dev Ports)")
         print("  [4] View Computer Specs & Mounted Drives")
         print("  [5] Create System Rollback Snapshot (Timeshift / Snapper)")
@@ -246,7 +248,7 @@ def run_interactive_cli(launch_gui_cb=None) -> int:
             run_headless_upgrade(auto_yes=False)
         elif choice == "3":
             print_network_audit()
-            port_in = input("Enter a port number to block external LAN access via UFW (or Enter to return): ").strip()
+            port_in = input(f"Enter a port number to block external LAN access via {fw_label} (or Enter to return): ").strip()
             if port_in.isdigit():
                 ok, msg = block_port_with_ufw(int(port_in), mode="cli")
                 print(f"{GREEN if ok else RED}{msg}{NC}\n")

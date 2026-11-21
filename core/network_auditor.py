@@ -148,33 +148,90 @@ def audit_listening_ports() -> list[dict[str, Any]]:
     return findings
 
 
+def detect_firewall_tool() -> str | None:
+    """Detect the active/installed Linux firewall backend (`ufw` or `firewalld`)."""
+    if shutil.which("ufw"):
+        return "ufw"
+    if shutil.which("firewall-cmd"):
+        return "firewalld"
+    return None
+
+
+def _systemd_service_state(unit: str) -> str:
+    """Safely query systemd unit state without crashing on non-systemd distros."""
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return "installed (non-systemd)"
+    try:
+        res = subprocess.run(
+            [systemctl, "is-active", unit],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return res.stdout.strip() or "unknown"
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
+def get_firewall_status() -> tuple[str, str]:
+    """Return `(backend_name, status)` for UFW or firewalld without requiring root."""
+    backend = detect_firewall_tool()
+    if backend == "ufw":
+        return "UFW", _systemd_service_state("ufw")
+    if backend == "firewalld":
+        return "firewalld", _systemd_service_state("firewalld")
+    return "None", "not_installed"
+
+
 def get_ufw_status() -> str:
-    """Return UFW installation / active summary without requiring root."""
-    if not shutil.which("ufw"):
+    """Return firewall summary string (backwards-compatible wrapper for UFW/firewalld)."""
+    backend, state = get_firewall_status()
+    if backend == "None":
         return "not_installed"
-    # Check systemd unit state (readable by non-root)
-    res = subprocess.run(
-        ["systemctl", "is-active", "ufw"],
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    return res.stdout.strip() or "unknown"
+    return f"{backend}: {state}"
 
 
-def block_port_with_ufw(port: int, mode: str = "cli") -> tuple[bool, str]:
-    """Block external LAN/WAN inbound traffic to a specific TCP port via UFW."""
-    if not shutil.which("ufw"):
-        return False, "UFW firewall is not installed (`sudo apt install ufw`)."
+def block_port_with_firewall(port: int, mode: str = "cli") -> tuple[bool, str]:
+    """Block external LAN/WAN inbound traffic to a specific TCP port via UFW or firewalld."""
     if not (1 <= port <= 65535):
         return False, f"Invalid port number: {port}"
 
-    rc, out = run_command(
-        ["ufw", "deny", "in", "proto", "tcp", "to", "any", "port", str(port)],
-        privileged=True,
-        mode=mode,
-        timeout=30,
-    )
-    if rc == 0:
-        return True, f"UFW rule added: blocked external inbound TCP on port {port}."
-    return False, f"Failed to add UFW rule (exit {rc}): {out}"
+    backend = detect_firewall_tool()
+    if backend == "ufw":
+        rc, out = run_command(
+            ["ufw", "deny", "in", "proto", "tcp", "to", "any", "port", str(port)],
+            privileged=True,
+            mode=mode,
+            timeout=30,
+        )
+        if rc == 0:
+            return True, f"UFW rule added: blocked external inbound TCP on port {port}."
+        return False, f"Failed to add UFW rule (exit {rc}): {out}"
+
+    if backend == "firewalld":
+        rich_rule = f'rule family="ipv4" port port="{port}" protocol="tcp" reject'
+        rc, out = run_command(
+            ["firewall-cmd", "--permanent", f"--add-rich-rule={rich_rule}"],
+            privileged=True,
+            mode=mode,
+            timeout=30,
+        )
+        if rc != 0:
+            return False, f"Failed to add firewalld rule (exit {rc}): {out}"
+        rc_rel, out_rel = run_command(
+            ["firewall-cmd", "--reload"],
+            privileged=True,
+            mode=mode,
+            timeout=30,
+        )
+        if rc_rel == 0:
+            return True, f"firewalld rule added & reloaded: blocked external inbound TCP on port {port}."
+        return False, f"Rule added, but firewalld reload failed (exit {rc_rel}): {out_rel}"
+
+    return False, "No supported firewall detected (install `ufw` on Debian/Ubuntu/Arch or `firewalld` on Fedora/openSUSE)."
+
+
+def block_port_with_ufw(port: int, mode: str = "cli") -> tuple[bool, str]:
+    """Backwards-compatible alias for `block_port_with_firewall`."""
+    return block_port_with_firewall(port=port, mode=mode)

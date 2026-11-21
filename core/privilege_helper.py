@@ -75,8 +75,43 @@ def authenticate_sudo_upfront(require_admin: bool = True) -> bool:
     return True
 
 
+def detect_system_package_manager() -> str | None:
+    """Detect the primary native Linux system package manager."""
+    if shutil.which("apt"):
+        return "apt"
+    if shutil.which("dnf") or shutil.which("dnf5"):
+        return "dnf"
+    if shutil.which("pacman"):
+        return "pacman"
+    if shutil.which("zypper"):
+        return "zypper"
+    if shutil.which("apk"):
+        return "apk"
+    return None
+
+
+def find_terminal_emulator() -> str | None:
+    """Resolve a portable Linux terminal emulator across GNOME, KDE, XFCE, and tiling WMs."""
+    for term in (
+        "xdg-terminal-exec",
+        "x-terminal-emulator",
+        "gnome-terminal",
+        "konsole",
+        "xfce4-terminal",
+        "mate-terminal",
+        "kitty",
+        "alacritty",
+        "wezterm",
+        "xterm",
+    ):
+        found = shutil.which(term)
+        if found:
+            return found
+    return None
+
+
 def ensure_tkinter_available(interactive: bool = True) -> bool:
-    """Ensure `python3-tk` is installed for GUI mode, offering automatic installation with user consent."""
+    """Ensure Tkinter is installed for GUI mode, offering automatic installation with user consent."""
     try:
         import tkinter  # noqa: F401
         return True
@@ -88,13 +123,22 @@ def ensure_tkinter_available(interactive: bool = True) -> bool:
         pkg_name = "python3-tk"
         install_cmd = ["apt", "install", "-y", pkg_name]
         refresh_cmd: list[str] | None = ["apt", "update"]
-    elif shutil.which("dnf"):
+    elif shutil.which("dnf") or shutil.which("dnf5"):
+        dnf_bin = "dnf5" if shutil.which("dnf5") else "dnf"
         pkg_name = "python3-tkinter"
-        install_cmd = ["dnf", "install", "-y", pkg_name]
+        install_cmd = [dnf_bin, "install", "-y", pkg_name]
         refresh_cmd = None
     elif shutil.which("pacman"):
         pkg_name = "tk"
         install_cmd = ["pacman", "-S", "--noconfirm", pkg_name]
+        refresh_cmd = None
+    elif shutil.which("zypper"):
+        pkg_name = "python3-tk"
+        install_cmd = ["zypper", "--non-interactive", "install", pkg_name]
+        refresh_cmd = None
+    elif shutil.which("apk"):
+        pkg_name = "py3-tkinter"
+        install_cmd = ["apk", "add", pkg_name]
         refresh_cmd = None
     else:
         print("[Notice] Python Tkinter is not installed and no supported package manager was detected.")
@@ -118,6 +162,18 @@ def ensure_tkinter_available(interactive: bool = True) -> bool:
                 f"--text=Python Tkinter ({pkg_name}) is required for Desktop GUI mode.\n\nInstall {pkg_name} automatically now?",
                 "--ok-label=Install Now",
                 "--cancel-label=Cancel",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        approved = res.returncode == 0
+        mode = "gui"
+    elif has_gui_display() and shutil.which("kdialog"):
+        res = subprocess.run(
+            [
+                "kdialog", "--yesno",
+                f"Python Tkinter ({pkg_name}) is required for Desktop GUI mode.\n\nInstall {pkg_name} automatically now?",
+                "--title", "Software Update Manager — GUI Setup",
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -193,7 +249,7 @@ def get_session_type() -> str:
 
 
 def build_privileged_cmd(cmd: Sequence[str], mode: str = "cli") -> list[str]:
-    """Wrap a command with pkexec (GUI) or sudo (CLI) if not already root."""
+    """Wrap a command with pkexec (GUI) or sudo/doas/run0 (CLI) if not already root."""
     cmd_list = list(cmd)
     if is_root():
         return cmd_list
@@ -201,6 +257,10 @@ def build_privileged_cmd(cmd: Sequence[str], mode: str = "cli") -> list[str]:
         return ["pkexec"] + cmd_list
     if shutil.which("sudo"):
         return ["sudo"] + cmd_list
+    if shutil.which("doas"):
+        return ["doas"] + cmd_list
+    if shutil.which("run0"):
+        return ["run0"] + cmd_list
     return cmd_list
 
 

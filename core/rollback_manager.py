@@ -10,7 +10,7 @@ import shutil
 from datetime import datetime
 from typing import Callable
 
-from core.privilege_helper import run_command
+from core.privilege_helper import detect_system_package_manager, run_command
 
 
 def detect_snapshot_tool() -> str | None:
@@ -20,6 +20,17 @@ def detect_snapshot_tool() -> str | None:
     if shutil.which("snapper"):
         return "snapper"
     return None
+
+
+def _snapshot_install_hint() -> str:
+    pm = detect_system_package_manager()
+    if pm == "dnf":
+        return "sudo dnf install timeshift"
+    if pm == "pacman":
+        return "sudo pacman -S timeshift"
+    if pm == "zypper":
+        return "sudo zypper install snapper"
+    return "sudo apt install timeshift"
 
 
 def create_pre_update_snapshot(
@@ -32,7 +43,7 @@ def create_pre_update_snapshot(
     if not tool:
         return (
             False,
-            "No system snapshot tool found. Install Timeshift (`sudo apt install timeshift`) "
+            f"No system snapshot tool found. Install Timeshift/Snapper (`{_snapshot_install_hint()}`) "
             "to enable 1-click pre-update rollback points.",
         )
 

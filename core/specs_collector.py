@@ -1,7 +1,7 @@
 """Linux hardware specifications and installed software inventory collector.
 
-100% Python Standard Library. Works on Zorin OS, Ubuntu, Debian, Linux Mint,
-and Pop!_OS.
+100% Python Standard Library. Works across Zorin OS, Ubuntu, Debian, Linux Mint,
+Pop!_OS, Fedora, RHEL, Arch Linux, Manjaro, and openSUSE.
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from core.config_manager import detect_secondary_drives
-from core.privilege_helper import get_session_type
+from core.network_auditor import detect_firewall_tool
+from core.privilege_helper import detect_system_package_manager, get_session_type
 
 
 def _read_os_release() -> dict[str, str]:
@@ -99,6 +100,8 @@ def collect_system_specs() -> dict[str, Any]:
         "os_id": os_rel.get("ID", "linux"),
         "kernel": platform.release(),
         "architecture": platform.machine(),
+        "package_manager": (detect_system_package_manager() or "unknown").upper(),
+        "firewall_backend": detect_firewall_tool() or "none",
         "desktop_env": os.environ.get("XDG_CURRENT_DESKTOP", "Unknown"),
         "display_session": get_session_type(),
         "python_version": platform.python_version(),
@@ -160,7 +163,7 @@ def collect_installed_apps(limit: int = 300) -> list[dict[str, str]]:
         except (OSError, subprocess.SubprocessError):
             pass
 
-    # 3. Manually installed APT packages (keeps inventory readable vs 2,500+ libs)
+    # 3. Native system packages (APT, RPM/DNF/Zypper, or Pacman)
     if shutil.which("apt-mark") and shutil.which("dpkg-query"):
         try:
             manual_res = subprocess.run(
@@ -186,6 +189,45 @@ def collect_installed_apps(limit: int = 300) -> list[dict[str, str]]:
                             "version": ver.strip(),
                             "source": "APT (Manual)",
                         })
+        except (OSError, subprocess.SubprocessError):
+            pass
+    elif shutil.which("pacman"):
+        try:
+            pac_res = subprocess.run(
+                ["pacman", "-Qe"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            for line in pac_res.stdout.splitlines()[:limit]:
+                cols = line.split()
+                if len(cols) >= 2:
+                    apps.append({
+                        "name": cols[0],
+                        "id": cols[0],
+                        "version": cols[1],
+                        "source": "Pacman (Explicit)",
+                    })
+        except (OSError, subprocess.SubprocessError):
+            pass
+    elif shutil.which("rpm"):
+        try:
+            rpm_res = subprocess.run(
+                ["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            source_label = "DNF (RPM)" if (shutil.which("dnf") or shutil.which("dnf5")) else "Zypper (RPM)"
+            for line in sorted(rpm_res.stdout.splitlines())[:limit]:
+                if "\t" in line:
+                    pkg, ver = line.split("\t", 1)
+                    apps.append({
+                        "name": pkg.strip(),
+                        "id": pkg.strip(),
+                        "version": ver.strip(),
+                        "source": source_label,
+                    })
         except (OSError, subprocess.SubprocessError):
             pass
 

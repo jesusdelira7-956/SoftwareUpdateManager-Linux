@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import re
 import shutil
 import stat
@@ -141,7 +142,9 @@ def _find_installed_app_dir(provider: dict[str, Any], search_dirs: list[Path]) -
 
 
 def _check_docker_desktop(provider: dict[str, Any]) -> UpdateItem | None:
-    """Check Docker Desktop installed build vs latest release notes build ID."""
+    """Check Docker Desktop installed build vs latest release notes build ID (amd64 .deb)."""
+    if platform.machine().lower() not in ("x86_64", "amd64") or not shutil.which("dpkg"):
+        return None
     dpkg_pkg = provider.get("dpkg_package", "docker-desktop")
     try:
         res = subprocess.run(

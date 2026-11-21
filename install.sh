@@ -12,24 +12,43 @@ BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 echo "=================================================================="
-echo "  Installing Linux / Zorin Software Update Manager (v1.0.0)"
+echo "  Installing Universal Linux Software Update Manager (v1.1.0)"
 echo "=================================================================="
 
 if ! command -v python3 >/dev/null 2>&1; then
-    echo "Error: python3 is required. Install it with: sudo apt install python3"
+    echo "Error: python3 is required. Install python3 via your distro's package manager."
     exit 1
 fi
 
 # Check for Tkinter (required for GUI mode; CLI works without it)
 if ! python3 -c "import tkinter" >/dev/null 2>&1; then
     echo ""
-    echo "[Notice] python3-tk is not currently installed (needed for Desktop GUI mode)."
+    echo "[Notice] Python Tkinter is not currently installed (needed for Desktop GUI mode)."
+    TK_CMD=""
+    TK_PKG=""
     if command -v apt >/dev/null 2>&1; then
-        read -r -p "Install python3-tk now via apt? [Y/n]: " ans
+        TK_PKG="python3-tk"
+        TK_CMD="sudo apt update && sudo apt install -y python3-tk"
+    elif command -v dnf5 >/dev/null 2>&1; then
+        TK_PKG="python3-tkinter"
+        TK_CMD="sudo dnf5 install -y python3-tkinter"
+    elif command -v dnf >/dev/null 2>&1; then
+        TK_PKG="python3-tkinter"
+        TK_CMD="sudo dnf install -y python3-tkinter"
+    elif command -v pacman >/dev/null 2>&1; then
+        TK_PKG="tk"
+        TK_CMD="sudo pacman -S --noconfirm tk"
+    elif command -v zypper >/dev/null 2>&1; then
+        TK_PKG="python3-tk"
+        TK_CMD="sudo zypper --non-interactive install python3-tk"
+    fi
+
+    if [ -n "$TK_CMD" ]; then
+        read -r -p "Install ${TK_PKG} now? [Y/n]: " ans
         if [[ -z "$ans" || "$ans" =~ ^[Yy]$ ]]; then
-            sudo apt update && sudo apt install -y python3-tk
+            eval "$TK_CMD"
         else
-            echo "Skipping python3-tk. You can still use --cli and --headless modes."
+            echo "Skipping ${TK_PKG}. You can still use --cli and --check modes."
         fi
     fi
 fi
@@ -46,6 +65,22 @@ chmod +x "$INSTALL_DIR/update_manager.py" "$INSTALL_DIR/agent_bridge.py"
 # Create CLI symlink in ~/.local/bin
 ln -sfn "$INSTALL_DIR/update_manager.py" "$BIN_DIR/$APP_ID"
 echo "Installed CLI command: $BIN_DIR/$APP_ID"
+
+# Resolve portable terminal emulator across GNOME, KDE, XFCE, and tiling WMs
+TERM_EXEC=""
+for candidate in xdg-terminal-exec x-terminal-emulator gnome-terminal konsole xfce4-terminal mate-terminal kitty alacritty xterm; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        if [ "$candidate" = "gnome-terminal" ]; then
+            TERM_EXEC="gnome-terminal --"
+        elif [ "$candidate" = "xdg-terminal-exec" ]; then
+            TERM_EXEC="xdg-terminal-exec"
+        else
+            TERM_EXEC="${candidate} -e"
+        fi
+        break
+    fi
+done
+TERM_EXEC="${TERM_EXEC:-xterm -e}"
 
 # Create .desktop launcher with both GUI and CLI actions
 ICON_PATH="${INSTALL_DIR}/assets/app_icon.png"
@@ -69,11 +104,11 @@ Actions=LaunchCLI;AuditNetwork;
 
 [Desktop Action LaunchCLI]
 Name=Launch Interactive CLI Mode
-Exec=x-terminal-emulator -e python3 ${INSTALL_DIR}/update_manager.py --cli
+Exec=${TERM_EXEC} python3 ${INSTALL_DIR}/update_manager.py --cli
 
 [Desktop Action AuditNetwork]
 Name=Audit Listening Network Ports
-Exec=x-terminal-emulator -e bash -c "python3 ${INSTALL_DIR}/update_manager.py --audit-network; read -p 'Press Enter to close...'"
+Exec=${TERM_EXEC} bash -c "python3 ${INSTALL_DIR}/update_manager.py --audit-network; read -p 'Press Enter to close...'"
 EOF
 chmod +x "$DESKTOP_FILE"
 
