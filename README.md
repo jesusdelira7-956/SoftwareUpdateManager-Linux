@@ -8,12 +8,17 @@
 
 [![Buy Me A Coffee](https://img.shields.io/badge/☕_Buy_Me_A_Coffee-Support_Development-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/JesseInTheLab)
 [![1-Click Linux Install](https://img.shields.io/badge/⚡_1--Click_Install-install.sh-E95420?style=for-the-badge&logo=linux&logoColor=white)](#-easy-installation-options-choose-what-works-best-for-you)
+[![Windows Edition](https://img.shields.io/badge/🪟_Windows_10/11_Edition-Also_Available-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/jesusdelira7-956/SoftwareUpdateManager)
 
 [![GitHub Release](https://img.shields.io/github/v/release/jesusdelira7-956/SoftwareUpdateManager-Linux?style=flat-square&label=Latest%20Release&color=brightgreen)](https://github.com/jesusdelira7-956/SoftwareUpdateManager-Linux/releases/latest)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0%20(100%25%20Python%20Stdlib)-success?style=flat-square)](requirements.txt)
 [![CI Validation](https://img.shields.io/github/actions/workflow/status/jesusdelira7-956/SoftwareUpdateManager-Linux/ci-validate.yml?style=flat-square&label=CI%20Validation)](https://github.com/jesusdelira7-956/SoftwareUpdateManager-Linux/actions)
 [![Distros: Zorin | Ubuntu | Debian | Fedora | Arch | openSUSE](https://img.shields.io/badge/Distros-Zorin%20%7C%20Ubuntu%20%7C%20Debian%20%7C%20Fedora%20%7C%20Arch%20%7C%20openSUSE-E95420?style=flat-square&logo=linux)](https://zorin.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+
+<br/>
+
+<img src="assets/screenshot_dashboard.png" alt="Universal Linux Software Update Manager & Intrusion Shield Dashboard" width="880" />
 
 </div>
 
