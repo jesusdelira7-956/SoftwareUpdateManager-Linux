@@ -54,6 +54,8 @@ def _try_launch_gui() -> int:
 def _prompt_mode_choice() -> int:
     """Authenticate upfront (Linux least-privilege) and let the user choose GUI or CLI."""
     if not sys.stdin.isatty():
+        if not authenticate_sudo_upfront(require_admin=True):
+            return 1
         return _try_launch_gui()
 
     if not authenticate_sudo_upfront(require_admin=True):

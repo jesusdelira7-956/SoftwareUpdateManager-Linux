@@ -71,7 +71,33 @@ def authenticate_sudo_upfront(require_admin: bool = True) -> bool:
             threading.Thread(target=_sudo_keepalive_loop, daemon=True).start()
         return True
 
-    # Non-TTY graphical launch: keep GUI running as $USER; pkexec handles elevation cleanly
+    # Non-TTY graphical launch (e.g., Desktop shortcut / App Menu):
+    # Prompt for administrator credentials upfront via Polkit (`pkexec`) while
+    # keeping the Python GUI process unprivileged as $USER (Linux least-privilege).
+    if has_gui_display() and shutil.which("pkexec"):
+        res = subprocess.run(
+            ["pkexec", "true"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if res.returncode != 0:
+            if require_admin:
+                msg = "Administrator authentication was cancelled or failed. Software Update Manager requires elevated authorization to manage system updates."
+                if shutil.which("zenity"):
+                    subprocess.run(
+                        ["zenity", "--error", "--title=Software Update Manager", f"--text={msg}"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                elif shutil.which("kdialog"):
+                    subprocess.run(
+                        ["kdialog", "--error", msg, "--title", "Software Update Manager"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+            return False
+        return True
+
     return True
 
 

@@ -7,6 +7,7 @@ user ($USER); privileged operations invoke `pkexec` on demand.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -54,7 +55,8 @@ class LinuxUpdateManagerGUI(tk.Tk):
         super().__init__()
         self.title(f"Linux / Zorin Software Update Manager & Intrusion Shield (v{APP_VERSION})")
         self.geometry("1120x740")
-        self.minsize(920, 620)
+        self.minsize(720, 500)
+        self.resizable(True, True)
         self.configure(bg=BG_DARK)
 
         self.config_data: dict[str, Any] = load_config()
@@ -232,6 +234,79 @@ class LinuxUpdateManagerGUI(tk.Tk):
         self._build_help_tab()
 
     # ------------------------------------------------------------------
+    # Shared UI Helpers: Sortable Treeviews & Draggable Splitters
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _natural_sort_key(value: str) -> list[tuple[int, Any]]:
+        """Natural sort key handling integers (ports, versions) and case-insensitive text."""
+        parts = re.split(r"(\d+)", str(value or "").strip().lower())
+        return [(0, int(p)) if p.isdigit() else (1, p) for p in parts if p]
+
+    def _make_paned_window(self, parent: tk.Widget, orient: str = tk.VERTICAL) -> tk.PanedWindow:
+        """Create a dark-themed draggable PanedWindow with a visible resize sash."""
+        return tk.PanedWindow(
+            parent,
+            orient=orient,
+            bg="#2c3445",
+            sashwidth=6,
+            sashpad=1,
+            sashrelief=tk.FLAT,
+            bd=0,
+            opaqueresize=True,
+        )
+
+    def _create_sortable_treeview(
+        self,
+        parent: tk.Widget,
+        col_specs: list[tuple[str, str, int, str]],
+        selectmode: str = "browse",
+    ) -> tuple[tk.Frame, ttk.Treeview]:
+        """Build a scrollable, column-resizable, click-to-sort Treeview widget.
+
+        col_specs: list of (col_id, heading_title, default_width, anchor)
+        """
+        container = tk.Frame(parent, bg=BG_DARK)
+        container.rowconfigure(0, weight=1)
+        container.columnconfigure(0, weight=1)
+
+        cols = tuple(c[0] for c in col_specs)
+        tree = ttk.Treeview(container, columns=cols, show="headings", selectmode=selectmode)
+
+        vsb = ttk.Scrollbar(container, orient=tk.VERTICAL, command=tree.yview)
+        hsb = ttk.Scrollbar(container, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+        tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
+
+        base_titles = {col_id: title for col_id, title, _, _ in col_specs}
+        sort_state: dict[str, bool] = {}
+
+        def _sort_by(col_id: str) -> None:
+            reverse = not sort_state.get(col_id, True)
+            sort_state.clear()
+            sort_state[col_id] = reverse
+
+            rows = [
+                (self._natural_sort_key(tree.set(iid, col_id)), iid)
+                for iid in tree.get_children("")
+            ]
+            rows.sort(key=lambda pair: pair[0], reverse=reverse)
+            for idx, (_, iid) in enumerate(rows):
+                tree.move(iid, "", idx)
+
+            arrow = " ▼" if reverse else " ▲"
+            for cid, base in base_titles.items():
+                tree.heading(cid, text=f"{base}{arrow}" if cid == col_id else base)
+
+        for col_id, title, width, anchor in col_specs:
+            tree.heading(col_id, text=title, command=lambda c=col_id: _sort_by(c))
+            tree.column(col_id, width=width, minwidth=65, anchor=anchor, stretch=True)
+
+        return container, tree
+
+    # ------------------------------------------------------------------
     # Tab 1: Software Updater
     # ------------------------------------------------------------------
     def _build_updater_tab(self) -> None:
@@ -266,27 +341,30 @@ class LinuxUpdateManagerGUI(tk.Tk):
             bg="#8e44ad", fg="#ffffff", relief=tk.FLAT, padx=12, pady=6, font=("Sans", 9),
         ).pack(side=tk.RIGHT)
 
-        cols = ("source", "name", "current", "available", "trust")
-        self.update_tree = ttk.Treeview(self.tab_updater, columns=cols, show="headings", selectmode="extended")
-        self.update_tree.heading("source", text="Source")
-        self.update_tree.heading("name", text="Package / Application")
-        self.update_tree.heading("current", text="Current Version")
-        self.update_tree.heading("available", text="Available Version")
-        self.update_tree.heading("trust", text="Trust Gate")
+        paned = self._make_paned_window(self.tab_updater, orient=tk.VERTICAL)
+        paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
 
-        self.update_tree.column("source", width=120, anchor=tk.W)
-        self.update_tree.column("name", width=340, anchor=tk.W)
-        self.update_tree.column("current", width=170, anchor=tk.W)
-        self.update_tree.column("available", width=190, anchor=tk.W)
-        self.update_tree.column("trust", width=110, anchor=tk.CENTER)
-        self.update_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 6))
+        tree_frame, self.update_tree = self._create_sortable_treeview(
+            paned,
+            col_specs=[
+                ("source", "Source", 120, tk.W),
+                ("name", "Package / Application", 340, tk.W),
+                ("current", "Current Version", 170, tk.W),
+                ("available", "Available Version", 190, tk.W),
+                ("trust", "Trust Gate", 110, tk.CENTER),
+            ],
+            selectmode="extended",
+        )
+        paned.add(tree_frame, minsize=140, stretch="always")
 
+        log_frame = tk.Frame(paned, bg=BG_DARK)
         self.log_box = scrolledtext.ScrolledText(
-            self.tab_updater, height=10, bg="#10131a", fg="#d8dee9",
+            log_frame, height=9, bg="#10131a", fg="#d8dee9",
             insertbackground="#ffffff", font=("Monospace", 9), relief=tk.FLAT,
         )
-        self.log_box.pack(fill=tk.X, padx=8, pady=(0, 8))
-        self._log("Ready. Click 'Scan All Sources' to check APT, Flatpak, Snap, Dev SDKs, and AppImages.")
+        self.log_box.pack(fill=tk.BOTH, expand=True)
+        paned.add(log_frame, minsize=90, stretch="never")
+        self._log("Ready. Click 'Scan All Sources' to check system packages, Flatpak, Snap, Dev SDKs, and AppImages.")
 
     def _log(self, message: str) -> None:
         def _append() -> None:
@@ -411,31 +489,33 @@ class LinuxUpdateManagerGUI(tk.Tk):
     # Tab 2: Specs & Installed Apps
     # ------------------------------------------------------------------
     def _build_specs_tab(self) -> None:
-        top = tk.Frame(self.tab_specs, bg=CARD_BG, padx=14, pady=12)
-        top.pack(fill=tk.X, padx=8, pady=8)
+        paned = self._make_paned_window(self.tab_specs, orient=tk.VERTICAL)
+        paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
+        top = tk.Frame(paned, bg=CARD_BG, padx=14, pady=12)
         self.specs_text = tk.Label(
             top, text="Click 'Refresh Specs & Inventory' to inspect hardware.",
             bg=CARD_BG, fg=TEXT_PRIMARY, justify=tk.LEFT, font=("Monospace", 9),
         )
-        self.specs_text.pack(side=tk.LEFT, anchor=tk.W)
+        self.specs_text.pack(side=tk.LEFT, anchor=tk.NW, fill=tk.BOTH, expand=True)
 
         tk.Button(
             top, text="Refresh Specs & Inventory", command=self._on_load_specs,
             bg=ACCENT, fg="#ffffff", relief=tk.FLAT, padx=12, pady=6,
         ).pack(side=tk.RIGHT, anchor=tk.N)
+        paned.add(top, minsize=95, stretch="never")
 
-        cols = ("source", "name", "id", "version")
-        self.inv_tree = ttk.Treeview(self.tab_specs, columns=cols, show="headings")
-        for col, title, w in (
-            ("source", "Source", 120),
-            ("name", "Application / Package", 280),
-            ("id", "Identifier", 280),
-            ("version", "Version", 180),
-        ):
-            self.inv_tree.heading(col, text=title)
-            self.inv_tree.column(col, width=w, anchor=tk.W)
-        self.inv_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        inv_frame, self.inv_tree = self._create_sortable_treeview(
+            paned,
+            col_specs=[
+                ("source", "Source", 130, tk.W),
+                ("name", "Application / Package", 280, tk.W),
+                ("id", "Identifier", 280, tk.W),
+                ("version", "Version", 180, tk.W),
+            ],
+            selectmode="browse",
+        )
+        paned.add(inv_frame, minsize=180, stretch="always")
 
     def _on_load_specs(self) -> None:
         def _worker() -> None:
@@ -481,18 +561,18 @@ class LinuxUpdateManagerGUI(tk.Tk):
         self.ufw_label = tk.Label(bar, text=f"Firewall: {get_ufw_status()}", bg=CARD_BG, fg=TEXT_MUTED)
         self.ufw_label.pack(side=tk.RIGHT)
 
-        cols = ("port", "bind", "process", "hint", "exposure")
-        self.net_tree = ttk.Treeview(self.tab_network, columns=cols, show="headings")
-        for col, title, w in (
-            ("port", "Port", 80),
-            ("bind", "Bind Address", 150),
-            ("process", "Process", 180),
-            ("hint", "Service / AI Engine", 260),
-            ("exposure", "Exposure Status", 240),
-        ):
-            self.net_tree.heading(col, text=title)
-            self.net_tree.column(col, width=w, anchor=tk.W)
-        self.net_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        net_frame, self.net_tree = self._create_sortable_treeview(
+            self.tab_network,
+            col_specs=[
+                ("port", "Port", 90, tk.W),
+                ("bind", "Bind Address", 150, tk.W),
+                ("process", "Process", 180, tk.W),
+                ("hint", "Service / AI Engine", 260, tk.W),
+                ("exposure", "Exposure Status", 240, tk.W),
+            ],
+            selectmode="browse",
+        )
+        net_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
 
     def _on_audit_network(self) -> None:
         ports = audit_listening_ports()
@@ -569,13 +649,18 @@ class LinuxUpdateManagerGUI(tk.Tk):
             bg="#2c3445", fg=TEXT_PRIMARY, relief=tk.FLAT, padx=12, pady=7, font=("Sans", 9),
         ).pack(side=tk.RIGHT)
 
+        # Draggable splitter between AI Launchpad (top) and MCP JSON Snippet (bottom)
+        ai_paned = self._make_paned_window(card, orient=tk.VERTICAL)
+        ai_paned.pack(fill=tk.BOTH, expand=True)
+
+        top_ai = tk.Frame(ai_paned, bg=CARD_BG)
         # Option A: Web AI Links
         tk.Label(
-            card, text="Web AI Assistants (Opens in Default Browser):",
+            top_ai, text="Web AI Assistants (Opens in Default Browser):",
             bg=CARD_BG, fg=TEXT_PRIMARY, font=("Sans", 10, "bold"),
         ).pack(anchor=tk.W, pady=(2, 6))
 
-        web_row = tk.Frame(card, bg=CARD_BG)
+        web_row = tk.Frame(top_ai, bg=CARD_BG)
         web_row.pack(fill=tk.X, pady=(0, 12))
         for ai in WEB_AI_ASSISTANTS:
             url = ai["url"]
@@ -588,23 +673,26 @@ class LinuxUpdateManagerGUI(tk.Tk):
 
         # Option B: Dynamically Detected Local Installed AI Shortcuts
         tk.Label(
-            card, text="Installed Local AI Apps & IDEs (Auto-Detected on This Machine):",
+            top_ai, text="Installed Local AI Apps & IDEs (Auto-Detected on This Machine):",
             bg=CARD_BG, fg=TEXT_PRIMARY, font=("Sans", 10, "bold"),
         ).pack(anchor=tk.W, pady=(2, 6))
 
-        self.local_ai_frame = tk.Frame(card, bg="#181d27", padx=10, pady=10)
-        self.local_ai_frame.pack(fill=tk.X, pady=(0, 12))
+        self.local_ai_frame = tk.Frame(top_ai, bg="#181d27", padx=10, pady=10)
+        self.local_ai_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 6))
         self._refresh_local_ai_buttons()
+        ai_paned.add(top_ai, minsize=160, stretch="always")
 
         # MCP Config Snippet
+        mcp_frame = tk.Frame(ai_paned, bg=CARD_BG)
         tk.Label(
-            card, text="Zero-Port Stdio MCP Client Configuration Snippet:",
+            mcp_frame, text="Zero-Port Stdio MCP Client Configuration Snippet:",
             bg=CARD_BG, fg=TEXT_PRIMARY, font=("Sans", 10, "bold"),
-        ).pack(anchor=tk.W)
-        box = scrolledtext.ScrolledText(card, height=8, bg="#10131a", fg="#a3be8c", font=("Monospace", 9), relief=tk.FLAT)
+        ).pack(anchor=tk.W, pady=(4, 0))
+        box = scrolledtext.ScrolledText(mcp_frame, height=8, bg="#10131a", fg="#a3be8c", font=("Monospace", 9), relief=tk.FLAT)
         box.pack(fill=tk.BOTH, expand=True, pady=(4, 0))
         box.insert("1.0", self._mcp_snippet)
         box.config(state=tk.DISABLED)
+        ai_paned.add(mcp_frame, minsize=110, stretch="always")
 
     def _on_launch_web_ai(self, url: str, name: str) -> None:
         ok, msg = launch_web_ai(url)
@@ -692,8 +780,13 @@ class LinuxUpdateManagerGUI(tk.Tk):
             bg=CARD_BG, fg=TEXT_MUTED,
         ).pack(anchor=tk.W, pady=(0, 10))
 
-        self.dirs_listbox = tk.Listbox(card, height=8, bg="#10131a", fg=TEXT_PRIMARY, font=("Monospace", 10), relief=tk.FLAT)
-        self.dirs_listbox.pack(fill=tk.X, pady=(0, 10))
+        list_container = tk.Frame(card, bg="#10131a")
+        list_container.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.dirs_listbox = tk.Listbox(list_container, height=8, bg="#10131a", fg=TEXT_PRIMARY, font=("Monospace", 10), relief=tk.FLAT)
+        dirs_vsb = ttk.Scrollbar(list_container, orient=tk.VERTICAL, command=self.dirs_listbox.yview)
+        self.dirs_listbox.configure(yscrollcommand=dirs_vsb.set)
+        self.dirs_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        dirs_vsb.pack(side=tk.RIGHT, fill=tk.Y)
         self._refresh_dirs_listbox()
 
         btns = tk.Frame(card, bg=CARD_BG)
