@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.tmp/
+*.AppImage
+*.deb
+*.tar.gz
+*.tar.xz
+*.log
+.env
+config.json
+version_cache.json

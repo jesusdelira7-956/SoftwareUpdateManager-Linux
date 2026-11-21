@@ -1,0 +1,4 @@
+# Zero third-party pip dependencies!
+# This project uses 100% Python 3.10+ Standard Library.
+# For Desktop GUI mode on Debian/Ubuntu/Zorin OS, install system package:
+#   sudo apt install python3-tk

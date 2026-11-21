@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-11-21",
+  "blocked_publishers": [
+    "ByteFence",
+    "Digital Communications Inc",
+    "Lavabits",
+    "Safer Technologies",
+    "Reason Cybersecurity",
+    "Mindspark Interactive",
+    "Visicom Media",
+    "SweetLabs"
+  ],
+  "blocked_name_patterns": [
+    "cryptominer",
+    "xmrig",
+    "coinhive",
+    "browser-hijacker",
+    "adware-installer",
+    "driver-booster",
+    "pc-accelerator",
+    "search-protect",
+    "web-companion",
+    "fake-flash"
+  ],
+  "blocked_package_names": [
+    "xmrig",
+    "minergate"
+  ],
+  "high_risk_paths": [
+    "/tmp/",
+    "/dev/shm/",
+    "/var/tmp/"
+  ]
+}

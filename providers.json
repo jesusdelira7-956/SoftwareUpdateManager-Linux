@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "description": "Declarative update provider registry for standalone Linux AppImages, tarballs, and packages with smart ETag/Redirect/Build-ID caching.",
+  "providers": [
+    {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "category": "AppImage",
+      "strategy": "github_release",
+      "repo": "obsidianmd/obsidian-releases",
+      "asset_regex": "browser_download_url.*AppImage\"$",
+      "filename_pattern": "Obsidian*.AppImage",
+      "target_symlink": "Obsidian.AppImage",
+      "default_subdir": "Applications"
+    },
+    {
+      "id": "joplin",
+      "name": "Joplin",
+      "category": "AppImage",
+      "strategy": "github_release",
+      "repo": "laurent22/joplin",
+      "asset_regex": "browser_download_url.*AppImage\"$",
+      "filename_pattern": "Joplin*.AppImage",
+      "target_symlink": "Joplin.AppImage",
+      "default_subdir": "Applications"
+    },
+    {
+      "id": "lm_studio",
+      "name": "LM Studio",
+      "category": "AI Engine (AppImage)",
+      "strategy": "http_redirect",
+      "url": "https://lmstudio.ai/download/latest/linux/x64?format=AppImage",
+      "filename_pattern": "LM-Studio*.AppImage",
+      "target_symlink": "LM-Studio-latest-x64.AppImage",
+      "default_subdir": "Applications"
+    },
+    {
+      "id": "anythingllm",
+      "name": "AnythingLLM Desktop",
+      "category": "AI Engine (AppImage)",
+      "strategy": "http_etag",
+      "url": "https://cdn.anythingllm.com/latest/AnythingLLMDesktop.AppImage",
+      "filename_pattern": "AnythingLLMDesktop.AppImage",
+      "target_symlink": "AnythingLLMDesktop.AppImage",
+      "default_subdir": "Applications"
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram Desktop",
+      "category": "Standalone Tarball",
+      "strategy": "http_redirect_tar",
+      "url": "https://telegram.org/dl/desktop/linux",
+      "binary_check": "Telegram",
+      "default_subdir": "Telegram"
+    },
+    {
+      "id": "balena_etcher",
+      "name": "balenaEtcher",
+      "category": "Standalone Zip",
+      "strategy": "github_release_zip",
+      "repo": "balena-io/etcher",
+      "asset_regex": "browser_download_url.*linux-x64.*\\.zip\"$",
+      "default_subdir": "balenaEtcher"
+    },
+    {
+      "id": "docker_desktop",
+      "name": "Docker Desktop",
+      "category": "System Package (.deb)",
+      "strategy": "docker_release_notes_deb",
+      "release_notes_url": "https://docs.docker.com/desktop/release-notes/",
+      "fallback_url": "https://desktop.docker.com/linux/main/amd64/docker-desktop-amd64.deb",
+      "dpkg_package": "docker-desktop"
+    }
+  ]
+}

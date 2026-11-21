@@ -1,0 +1,44 @@
+name: CI — Validate Syntax, Schemas & Zero-Dependencies
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile-check all Python modules (Zero pip deps)
+        run: |
+          python3 -m py_compile update_manager.py agent_bridge.py core/*.py ui/*.py
+
+      - name: Validate install.sh bash syntax
+        run: |
+          bash -n install.sh
+
+      - name: Validate JSON configuration & provider schemas
+        run: |
+          python3 -c '
+          import json
+          for f in ("providers.json", "pup_blocklist.json", "agent_permissions.json"):
+              with open(f, encoding="utf-8") as fh:
+                  data = json.load(fh)
+              assert isinstance(data, dict), f"{f} must be a JSON object"
+              print(f"OK: {f}")
+          '
+
+      - name: Smoke test CLI & Zero-Port Stdio MCP
+        run: |
+          python3 update_manager.py --version
+          python3 update_manager.py --specs --json > /dev/null
+          echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}" | python3 update_manager.py --mcp | grep -q "get_system_specs"
