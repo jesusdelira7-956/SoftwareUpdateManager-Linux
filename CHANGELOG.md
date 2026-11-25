@@ -2,6 +2,18 @@
 
 All notable changes to **Linux / Zorin Software Update Manager & Intrusion Shield** will be documented in this file.
 
+## [1.2.0] - 2026-11-25 — Deep Discovery, AI Services & GUI Polish
+
+### Added
+- **3-Level Deep Bounded App Discovery (`core/appimage_engine.py`):** Recursively scans user-configured secondary drives and custom folders up to 3 levels deep (pruning `.git`, `node_modules`, `.venv`, `models`, `blobs`, caches) so organized subdirectories like `Applications/Telegram` or `Tools/Obsidian` are discovered automatically with zero hardcoded paths.
+- **Ollama Local LLM Service Updater (`core/package_engine.py`):** Compares `ollama --version` against live upstream GitHub releases (`ollama/ollama`) and runs the official installer + systemd restart only when a newer version is available.
+- **Git-Managed Local AI Repo Engine (`providers.json` + `core/appimage_engine.py`):** Auto-discovers installed **SwarmUI**, **ComfyUI**, **Automatic1111**, and **Text Generation WebUI** repositories, checks upstream commits (`git fetch` + `rev-list`), and updates cleanly via `git pull --autostash`.
+- **Completed Provider Strategies:** Implemented `github_release_zip` (**balenaEtcher**), `antigravity_cloud_tar` (**Antigravity Core 2.0** & **Antigravity IDE**), and smart on-disk AppImage version matching to prevent false-positive update alerts.
+- **Desktop GUI Polish (`ui/gui_app.py` & `core/privilege_helper.py`):**
+  - Enforced upfront Polkit (`pkexec`) administrator authentication on Desktop icon startup (while keeping the GUI process unprivileged as `$USER`).
+  - Added click-to-sort column headers (`▲` / `▼`) with natural numeric/version sorting across all table tabs.
+  - Added draggable `PanedWindow` dividers, vertical + horizontal scrollbars, and resizable columns across all tabs.
+
 ## [1.1.0] - 2026-11-21 — Universal Linux Distro Support
 
 ### Added

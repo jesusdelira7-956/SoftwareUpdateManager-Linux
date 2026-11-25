@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "description": "Declarative update provider registry for standalone Linux AppImages, tarballs, and packages with smart ETag/Redirect/Build-ID caching.",
+  "schema_version": "1.2",
+  "description": "Declarative update provider registry for standalone Linux AppImages, tarballs, zips, cloud-API apps, and packages with smart ETag/Redirect/Build-ID caching.",
   "providers": [
     {
       "id": "obsidian",
@@ -59,8 +59,32 @@
       "category": "Standalone Zip",
       "strategy": "github_release_zip",
       "repo": "balena-io/etcher",
-      "asset_regex": "browser_download_url.*linux-x64.*\\.zip\"$",
+      "asset_regex": "linux-x64.*\\.zip$",
+      "binary_check": "balena-etcher",
+      "filename_pattern": "*balena*etcher*",
       "default_subdir": "balenaEtcher"
+    },
+    {
+      "id": "antigravity_core",
+      "name": "Antigravity Core 2.0",
+      "category": "AI Platform",
+      "strategy": "antigravity_cloud_tar",
+      "api_url": "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/releases",
+      "url_template": "https://storage.googleapis.com/antigravity-public/antigravity-hub/{version}-{execution_id}/linux-x64/Antigravity.tar.gz",
+      "binary_check": "antigravity",
+      "version_file": ".antigravity_core_version",
+      "default_subdir": "Antigravity"
+    },
+    {
+      "id": "antigravity_ide",
+      "name": "Antigravity IDE",
+      "category": "AI IDE",
+      "strategy": "antigravity_cloud_tar",
+      "api_url": "https://antigravity-ide-auto-updater-974169037036.us-central1.run.app/releases",
+      "url_template": "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/{version}-{execution_id}/linux-x64/Antigravity%20IDE.tar.gz",
+      "binary_check": "antigravity-ide",
+      "version_file": ".antigravity_ide_version",
+      "default_subdir": "Antigravity-IDE"
     },
     {
       "id": "docker_desktop",
@@ -70,6 +94,32 @@
       "release_notes_url": "https://docs.docker.com/desktop/release-notes/",
       "fallback_url": "https://desktop.docker.com/linux/main/amd64/docker-desktop-amd64.deb",
       "dpkg_package": "docker-desktop"
+    }
+  ],
+  "git_ai_repos": [
+    {
+      "id": "swarmui",
+      "name": "SwarmUI",
+      "dir_names": ["SwarmUI"],
+      "marker_files": ["launch-linux.sh", "SwarmUI.sln"]
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "dir_names": ["ComfyUI"],
+      "marker_files": ["main.py", "comfy"]
+    },
+    {
+      "id": "automatic1111",
+      "name": "Stable Diffusion WebUI (A1111)",
+      "dir_names": ["stable-diffusion-webui"],
+      "marker_files": ["webui.sh", "launch.py"]
+    },
+    {
+      "id": "text_gen_webui",
+      "name": "Text Generation WebUI",
+      "dir_names": ["text-generation-webui"],
+      "marker_files": ["server.py", "start_linux.sh"]
     }
   ]
 }

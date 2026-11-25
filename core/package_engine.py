@@ -520,6 +520,30 @@ def scan_dev_sdks(config: dict[str, Any]) -> list[UpdateItem]:
         except (OSError, subprocess.SubprocessError):
             pass
 
+    # 6. Ollama Local LLM Inference Service
+    if config.get("enable_ollama", True):
+        ollama_bin = _find_binary("ollama")
+        if ollama_bin:
+            try:
+                ver_res = subprocess.run([ollama_bin, "--version"], capture_output=True, text=True, timeout=8)
+                local_ver = _parse_semver(ver_res.stdout or ver_res.stderr)
+                remote_data = _fetch_remote_json("https://api.github.com/repos/ollama/ollama/releases/latest")
+                remote_ver = _parse_semver((remote_data or {}).get("tag_name", ""))
+                if local_ver and remote_ver and remote_ver > local_ver:
+                    items.append(UpdateItem(
+                        id="ai:ollama",
+                        name="Ollama Local LLM Service",
+                        source="AI Service",
+                        current_version=".".join(map(str, local_ver)),
+                        available_version=".".join(map(str, remote_ver)),
+                        trust_status="TRUSTED",
+                        trust_reasons=[],
+                        needs_root=True,
+                        metadata={"service": "ollama"},
+                    ))
+            except (OSError, subprocess.SubprocessError):
+                pass
+
     return items
 
 
@@ -614,6 +638,20 @@ def apply_package_update(
         if not cmd:
             return False, "Missing SDK update command."
         rc, out = run_command(cmd, privileged=False, mode=mode, timeout=300, stream_cb=stream_cb)
+        return rc == 0, out
+
+    if item.source == "AI Service" and item.metadata.get("service") == "ollama":
+        if not shutil.which("curl"):
+            return False, "curl is required to run the official Ollama installer."
+        rc, out = run_command(
+            ["sh", "-c", "curl -fsSL https://ollama.com/install.sh | sh"],
+            privileged=True,
+            mode=mode,
+            timeout=600,
+            stream_cb=stream_cb,
+        )
+        if rc == 0 and shutil.which("systemctl"):
+            run_command(["systemctl", "restart", "ollama"], privileged=True, mode=mode, timeout=30)
         return rc == 0, out
 
     return False, f"Unsupported package source: {item.source}"

@@ -68,7 +68,7 @@ def apply_update_item(
     logger = get_logger()
     logger.info("Applying update: %s (%s) [%s -> %s]", item.name, item.source, item.current_version, item.available_version)
 
-    if item.source in ("AppImage", "Standalone", "Docker (.deb)"):
+    if item.source in ("AppImage", "Standalone", "Docker (.deb)", "Git AI Repo"):
         ok, msg = apply_standalone_update(item, mode=mode, timeout_lock=timeout_lock, stream_cb=stream_cb)
     else:
         ok, msg = apply_package_update(item, mode=mode, timeout_lock=timeout_lock, stream_cb=stream_cb)

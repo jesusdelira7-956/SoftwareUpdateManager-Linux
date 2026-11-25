@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "software-update-manager"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 # XDG Base Directory paths
 XDG_CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
