@@ -110,6 +110,10 @@ _PRUNED_DIR_NAMES = {
     ".cache", "lost+found", ".tmp", "tmp", "Cache", "GPUCache", "Code Cache",
     "DawnCache", "extensions", "site-packages", "target", "build", "dist",
     ".Trash-1000", "SteamLibrary", "steamapps", "docker-data",
+    # Dual-boot Windows NTFS & shared AI model vault directories
+    "Windows", "Program Files", "Program Files (x86)", "ProgramData",
+    "$Recycle.Bin", "System Volume Information", "Recovery", "PerfLogs",
+    "AI_Models", "huggingface",
 }
 
 
@@ -263,8 +267,9 @@ def _scan_git_ai_repos(candidate_dirs: list[Path]) -> list[UpdateItem]:
             dir_names = [d.lower() for d in rdef.get("dir_names", [])]
             markers = rdef.get("marker_files", [])
             name_match = folder.name.lower() in dir_names
-            marker_match = any((folder / m).exists() for m in markers)
-            if not (name_match or marker_match):
+            all_markers = bool(markers) and all((folder / m).exists() for m in markers)
+            any_marker = bool(markers) and any((folder / m).exists() for m in markers)
+            if not (all_markers or (name_match and any_marker)):
                 continue
 
             matched_ids.add(rid)
@@ -567,6 +572,49 @@ def scan_standalone_updates(config: dict[str, Any]) -> list[UpdateItem]:
     return items
 
 
+def _safe_extract_tar_strip_root(tar_path: Path, install_dir: Path) -> None:
+    """Safely extract a tarball stripping a single top-level directory and replacing existing files."""
+    with tarfile.open(tar_path, "r:*") as tf:
+        members = tf.getmembers()
+        top_dirs = {
+            Path(m.name).parts[0]
+            for m in members
+            if m.name and Path(m.name).parts and Path(m.name).parts[0] != "."
+        }
+        strip_single_root = len(top_dirs) == 1
+
+        for member in members:
+            parts = [p for p in Path(member.name).parts if p not in ("", ".")]
+            if not parts:
+                continue
+            if strip_single_root:
+                if len(parts) == 1 and member.isdir():
+                    # Skip the top-level directory entry itself (e.g. `Telegram/`) so it never
+                    # collides with an existing binary of the same name inside `install_dir`.
+                    continue
+                if len(parts) > 1:
+                    parts = parts[1:]
+
+            if ".." in parts or parts[0].startswith("/"):
+                continue
+
+            rel_path = Path(*parts)
+            target_path = install_dir / rel_path
+            member.name = str(rel_path)
+
+            if member.isdir():
+                target_path.mkdir(parents=True, exist_ok=True)
+                continue
+
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            if target_path.exists() or target_path.is_symlink():
+                if target_path.is_dir() and not target_path.is_symlink():
+                    shutil.rmtree(target_path)
+                else:
+                    target_path.unlink(missing_ok=True)
+            tf.extract(member, path=install_dir)
+
+
 def apply_standalone_update(
     item: UpdateItem,
     mode: str = "cli",
@@ -638,14 +686,14 @@ def apply_standalone_update(
 
     if strategy == "git_pull":
         rc, out = run_command(
-            ["git", "-C", str(install_dir), "pull", "--autostash"],
+            ["git", "-C", str(install_dir), "pull", "--rebase", "--autostash"],
             privileged=False,
             mode=mode,
             timeout=180,
             stream_cb=stream_cb,
         )
         if rc == 0:
-            return True, f"{provider['name']} updated cleanly via git pull."
+            return True, f"{provider['name']} updated cleanly via git pull --rebase."
         return False, f"git pull failed (exit {rc}): {out[-300:]}"
 
     if strategy == "github_release_zip":
@@ -678,14 +726,7 @@ def apply_standalone_update(
         if stream_cb:
             stream_cb(f"  Verified SHA-256: {sha[:16]}...")
         try:
-            with tarfile.open(tar_path, "r:*") as tf:
-                for member in tf.getmembers():
-                    parts = Path(member.name).parts
-                    if len(parts) > 1:
-                        member.name = str(Path(*parts[1:]))
-                    if ".." in Path(member.name).parts or member.name.startswith("/"):
-                        continue
-                    tf.extract(member, path=install_dir)
+            _safe_extract_tar_strip_root(tar_path, install_dir)
             tar_path.unlink(missing_ok=True)
             vfile = install_dir / provider.get("version_file", ".version")
             try:
@@ -704,15 +745,7 @@ def apply_standalone_update(
         if not _download_file(url, tar_path, stream_cb=stream_cb):
             return False, f"Failed to download {provider['name']} archive."
         try:
-            with tarfile.open(tar_path, "r:*") as tf:
-                # Safe extraction stripping top-level directory if present
-                for member in tf.getmembers():
-                    parts = Path(member.name).parts
-                    if len(parts) > 1:
-                        member.name = str(Path(*parts[1:]))
-                    if ".." in Path(member.name).parts or member.name.startswith("/"):
-                        continue
-                    tf.extract(member, path=install_dir)
+            _safe_extract_tar_strip_root(tar_path, install_dir)
             tar_path.unlink(missing_ok=True)
             cache[pid] = {"tarball": token}
             save_version_cache(cache)

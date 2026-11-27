@@ -2,6 +2,13 @@
 
 All notable changes to **Linux / Zorin Software Update Manager & Intrusion Shield** will be documented in this file.
 
+## [1.2.1] - 2026-11-27 — Tarball Extraction, Git Repo Strict Matching & Dual-Boot NTFS Alignment
+
+### Fixed
+- **Telegram / Tarball `[Errno 17] File exists` Fix (`core/appimage_engine.py`):** Added `_safe_extract_tar_strip_root()` which skips the single top-level directory entry itself (e.g., `Telegram/`) and cleanly unlinks existing files before extraction so updating `Telegram Desktop` and `Antigravity` tarballs never collides with existing binaries.
+- **Git AI Repo False-Positive & Divergent Branch Fix (`core/appimage_engine.py`):** Tightened `_scan_git_ai_repos()` to require *all* marker files (or matching folder name + marker) so unrelated Python repos containing `main.py` are never misidentified as ComfyUI, and switched `git pull` to `git pull --rebase --autostash` to cleanly reconcile divergent branches.
+- **Dual-Boot Windows NTFS & Shared AI Model Vault Alignment (`core/appimage_engine.py`):** Pruned Windows OS and shared model vault directories (`Windows`, `Program Files`, `ProgramData`, `$Recycle.Bin`, `System Volume Information`, `AI_Models`, `huggingface`) from deep app discovery so Linux+Windows dual-boot mounts stay fast and untouched.
+
 ## [1.2.0] - 2026-11-25 — Deep Discovery, AI Services & GUI Polish
 
 ### Added
