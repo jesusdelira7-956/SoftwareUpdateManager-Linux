@@ -2,9 +2,9 @@
 
 <img src="assets/circle_logo_large.png" alt="Software Update Manager — Jesse In The Lab" width="140" />
 
-# 🛡️ Universal Linux Software Update Manager & Intrusion Shield (v1.1.0)
+# 🛡️ Universal Linux Software Update Manager & Intrusion Shield (v1.2.1)
 
-**Universal Multi-Distro Updates (APT • DNF • Pacman • Zypper • Flatpak • Snap • AppImage) • `0.0.0.0` LAN Intrusion Shield (UFW & firewalld) • Zero-Port 4-Tier AI MCP Bridge**
+**Universal Multi-Distro Updates (APT • DNF • Pacman • Zypper • Flatpak • Snap • AppImage • Ollama • Git AI Repos) • `0.0.0.0` LAN Intrusion Shield (UFW & firewalld) • Zero-Port 4-Tier AI MCP Bridge**
 
 [![Buy Me A Coffee](https://img.shields.io/badge/☕_Buy_Me_A_Coffee-Support_Development-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/JesseInTheLab)
 [![1-Click Linux Install](https://img.shields.io/badge/⚡_1--Click_Install-install.sh-E95420?style=for-the-badge&logo=linux&logoColor=white)](#-easy-installation-options-choose-what-works-best-for-you)
@@ -27,7 +27,7 @@
 A portable, universal desktop application and CLI for **all major Linux distributions — Zorin OS, Ubuntu, Debian, Linux Mint, Pop!_OS, Fedora, RHEL, Nobara, Arch Linux, Manjaro, EndeavourOS, and openSUSE (Tumbleweed & Leap)** — built with **100% Python Standard Library (zero third-party `pip` runtime dependencies)**. It audits hardware specifications, scans installed software across **APT, DNF/DNF5, Pacman, Zypper, Flatpak, Snap, Dev SDKs, and AppImages**, updates packages safely, enforces a **Pre-Update Security & Trust Gate**, defends against LAN probes with **UFW & `firewalld`** auto-detection, and connects safely to AI assistants via a **4-Tier Local Agent Permission Model & Zero-Port Stdio MCP Server**.
 
 > [!NOTE]
-> **What's New in v1.1.0 (Universal Linux Release):** Full native support for **Fedora/RHEL (`dnf`/`dnf5`)**, **Arch/Manjaro (`pacman` with safe full-sync guard)**, **openSUSE (`zypper`)**, **`firewalld`** 1-click port blocking alongside `ufw`, **KDE Plasma (`kdialog`) + GNOME (`zenity`)** prompts, **`doas`/`run0`** elevation fallbacks, and portable terminal detection across all desktop environments!
+> **What's New in v1.2.1:** 3-level deep secondary-drive app discovery (with dual-boot Windows NTFS & shared `AI_Models` vault pruning), **Ollama** local LLM updater, **Git AI Repo** updater (SwarmUI, ComfyUI, A1111 with `--rebase --autostash`), safe root-strip tarball extraction, upfront **Polkit (`pkexec`)** GUI startup auth, **click-to-sort columns (`▲`/`▼`)**, and **draggable resize panes** across all tabs! Read the full backstory in [`docs/ARCHITECTURE_AND_STORY.md`](docs/ARCHITECTURE_AND_STORY.md).
 
 ---
 

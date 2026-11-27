@@ -12,7 +12,7 @@ BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 echo "=================================================================="
-echo "  Installing Universal Linux Software Update Manager (v1.1.0)"
+echo "  Installing Universal Linux Software Update Manager (v1.2.1)"
 echo "=================================================================="
 
 if ! command -v python3 >/dev/null 2>&1; then
